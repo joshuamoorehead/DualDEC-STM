@@ -1,0 +1,260 @@
+{
+    "Cubic": {
+        "baseline": {
+            "final_train_loss": 0.020946185504778836,
+            "final_val_loss": 0.020846743961175283,
+            "best_val_loss": 0.020846743961175283,
+            "final_mse": 0.015558000653982162,
+            "final_ssim": 0.8916695101731489,
+            "training_time": 148.3340039253235,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "lower_lr": {
+            "final_train_loss": 0.024135434520168184,
+            "final_val_loss": 0.023796823138991993,
+            "best_val_loss": 0.023796823138991993,
+            "final_mse": 0.032627612352371216,
+            "final_ssim": 0.8698910097686611,
+            "training_time": 148.68161129951477,
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "small_batch": {
+            "final_train_loss": 0.02004872245589892,
+            "final_val_loss": 0.020115270599722863,
+            "best_val_loss": 0.020016324328051675,
+            "final_mse": 0.017638681456446648,
+            "final_ssim": 0.912973875902137,
+            "training_time": 280.8773822784424,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 256,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "large_batch": {
+            "final_train_loss": 0.021264665057643867,
+            "final_val_loss": 0.021124947948588265,
+            "best_val_loss": 0.021124947948588265,
+            "final_mse": 0.01664712280035019,
+            "final_ssim": 0.9270294000502347,
+            "training_time": 144.6199653148651,
+            "hyperparameters": {
+                "learning_rate": 0.002,
+                "batch_size": 2048,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "more_patches": {
+            "final_train_loss": 0.02032986685914372,
+            "final_val_loss": 0.020118548643021355,
+            "best_val_loss": 0.02006345145505707,
+            "final_mse": 0.015204500406980515,
+            "final_ssim": 0.9027284886561283,
+            "training_time": 225.04469418525696,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 4900
+            }
+        },
+        "extended_training": {
+            "final_train_loss": 0.019900913478854376,
+            "final_val_loss": 0.01972992505795426,
+            "best_val_loss": 0.019570844527747894,
+            "final_mse": 0.02957761660218239,
+            "final_ssim": 0.9130213094406386,
+            "training_time": 297.0889427661896,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 200,
+                "patches_per_image": 3000
+            }
+        }
+    },
+    "BCC": {
+        "baseline": {
+            "final_train_loss": 0.02247009111405947,
+            "final_val_loss": 0.023706055109699566,
+            "best_val_loss": 0.023695227321651247,
+            "final_mse": 0.018752610310912132,
+            "final_ssim": 0.8542274368458053,
+            "training_time": 145.30463409423828,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "lower_lr": {
+            "final_train_loss": 0.026587229557908498,
+            "final_val_loss": 0.02895753675699234,
+            "best_val_loss": 0.02895753675699234,
+            "final_mse": 0.029185833409428596,
+            "final_ssim": 0.7959145220364032,
+            "training_time": 145.1889009475708,
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "small_batch": {
+            "final_train_loss": 0.021186088501642913,
+            "final_val_loss": 0.02274872342414326,
+            "best_val_loss": 0.02268017000125514,
+            "final_mse": 0.0205230712890625,
+            "final_ssim": 0.9093178352531122,
+            "training_time": 258.76611590385437,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 256,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "large_batch": {
+            "final_train_loss": 0.02306692113670019,
+            "final_val_loss": 0.02505029475192229,
+            "best_val_loss": 0.02505029475192229,
+            "final_mse": 0.0198846235871315,
+            "final_ssim": 0.8901679065762734,
+            "training_time": 142.49916291236877,
+            "hyperparameters": {
+                "learning_rate": 0.002,
+                "batch_size": 2048,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "more_patches": {
+            "final_train_loss": 0.022382233106360144,
+            "final_val_loss": 0.02371811250136012,
+            "best_val_loss": 0.023706306499384697,
+            "final_mse": 0.019630659371614456,
+            "final_ssim": 0.9092122385291015,
+            "training_time": 219.74386882781982,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 4900
+            }
+        },
+        "extended_training": {
+            "final_train_loss": 0.020793186052487447,
+            "final_val_loss": 0.021765301729242008,
+            "best_val_loss": 0.02166283293730683,
+            "final_mse": 0.018495971336960793,
+            "final_ssim": 0.8857694252007672,
+            "training_time": 289.68281078338623,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 200,
+                "patches_per_image": 3000
+            }
+        }
+    },
+    "FCC": {
+        "baseline": {
+            "final_train_loss": 0.020592786052037234,
+            "final_val_loss": 0.023383824080938385,
+            "best_val_loss": 0.023355293278892835,
+            "final_mse": 0.022354381158947945,
+            "final_ssim": 0.8986735360152056,
+            "training_time": 180.82771635055542,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "lower_lr": {
+            "final_train_loss": 0.023076131289797044,
+            "final_val_loss": 0.025720421240443277,
+            "best_val_loss": 0.025720421240443277,
+            "final_mse": 0.02611355297267437,
+            "final_ssim": 0.8373644441163458,
+            "training_time": 179.64022994041443,
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "small_batch": {
+            "final_train_loss": 0.019330482448659727,
+            "final_val_loss": 0.022122795217803547,
+            "best_val_loss": 0.022122795217803547,
+            "final_mse": 0.026621686294674873,
+            "final_ssim": 0.7656348650755526,
+            "training_time": 323.93452286720276,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 256,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "large_batch": {
+            "final_train_loss": 0.020281149976437363,
+            "final_val_loss": 0.023184759865204494,
+            "best_val_loss": 0.023022405079432897,
+            "final_mse": 0.018381204456090927,
+            "final_ssim": 0.8944226361456372,
+            "training_time": 175.67785692214966,
+            "hyperparameters": {
+                "learning_rate": 0.002,
+                "batch_size": 2048,
+                "epochs": 100,
+                "patches_per_image": 3000
+            }
+        },
+        "more_patches": {
+            "final_train_loss": 0.020380459563863956,
+            "final_val_loss": 0.02318195328116417,
+            "best_val_loss": 0.02318195328116417,
+            "final_mse": 0.01674840599298477,
+            "final_ssim": 0.8768395594999093,
+            "training_time": 275.6727182865143,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 100,
+                "patches_per_image": 4900
+            }
+        },
+        "extended_training": {
+            "final_train_loss": 0.019635024047313043,
+            "final_val_loss": 0.022205338182193893,
+            "best_val_loss": 0.022205338182193893,
+            "final_mse": 0.015188317745923996,
+            "final_ssim": 0.9491022460314693,
+            "training_time": 357.5163195133209,
+            "hyperparameters": {
+                "learning_rate": 0.001,
+                "batch_size": 1024,
+                "epochs": 200,
+                "patches_per_image": 3000
+            }
+        }
+    }
+}

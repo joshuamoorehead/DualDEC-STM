@@ -1,0 +1,46 @@
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+Lattice Type & Configuration & Average MSE & Average SSIM \\
+\hline
+Cubic & baseline & 0.0156 & 0.8917 \\
+\hline
+Cubic & lower_lr & 0.0326 & 0.8699 \\
+\hline
+Cubic & small_batch & 0.0176 & 0.9130 \\
+\hline
+Cubic & large_batch & 0.0166 & 0.9270 \\
+\hline
+Cubic & more_patches & 0.0152 & 0.9027 \\
+\hline
+Cubic & extended_training & 0.0296 & 0.9130 \\
+\hline
+BCC & baseline & 0.0188 & 0.8542 \\
+\hline
+BCC & lower_lr & 0.0292 & 0.7959 \\
+\hline
+BCC & small_batch & 0.0205 & 0.9093 \\
+\hline
+BCC & large_batch & 0.0199 & 0.8902 \\
+\hline
+BCC & more_patches & 0.0196 & 0.9092 \\
+\hline
+BCC & extended_training & 0.0185 & 0.8858 \\
+\hline
+FCC & baseline & 0.0224 & 0.8987 \\
+\hline
+FCC & lower_lr & 0.0261 & 0.8374 \\
+\hline
+FCC & small_batch & 0.0266 & 0.7656 \\
+\hline
+FCC & large_batch & 0.0184 & 0.8944 \\
+\hline
+FCC & more_patches & 0.0167 & 0.8768 \\
+\hline
+FCC & extended_training & 0.0152 & 0.9491 \\
+\hline
+\end{tabular}
+\caption{Performance metrics across different lattice types and configurations}
+\label{tab:performance_metrics}
+\end{table}
