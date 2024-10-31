@@ -417,7 +417,7 @@ def create_training_plots(all_results, save_path='analysis/figures/'):
         })
 
     # Create a single figure with 2x3 subplot layout
-    fig = plt.figure(figsize=(20, 12), dpi=300)
+    fig = plt.figure(figsize=(24, 16), dpi=300)  # Increased from (20, 12)
     gs = GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3)
 
     # Set modern style
