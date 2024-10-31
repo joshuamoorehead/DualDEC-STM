@@ -17,6 +17,8 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import ScalarFormatter
 from tensorboard.backend.event_processing import event_accumulator
 import json
 from collections import defaultdict
@@ -387,162 +389,99 @@ def extract_tensorboard_data(log_dir):
     
     return data
 
-def create_training_plots(all_results, metric='Loss/train'):
-   """Create training plots for each lattice type with enhanced visualization."""
-   lattice_types = ['Cubic', 'BCC', 'FCC']
-   
-   # Define styles for each config with bolder lines and better colors
-   styles = {
-       'baseline': {
-           'color': '#1f77b4',  # Blue
-           'linestyle': '-', 
-           'marker': 'o',
-           'markevery': 20,
-           'linewidth': 3,
-           'markersize': 8,
-           'label': 'Baseline'
-       },
-       'lower_lr': {
-           'color': '#ff7f0e',  # Orange
-           'linestyle': '--',
-           'marker': 's',
-           'markevery': 20,
-           'linewidth': 3,
-           'markersize': 8,
-           'label': 'Lower LR'
-       },
-       'small_batch': {
-           'color': '#2ca02c',  # Green
-           'linestyle': ':',
-           'marker': '^',
-           'markevery': 20,
-           'linewidth': 4,
-           'markersize': 8,
-           'label': 'Small Batch'
-       },
-       'large_batch': {
-           'color': '#d62728',  # Red
-           'linestyle': '-.',
-           'marker': 'v',
-           'markevery': 20,
-           'linewidth': 3,
-           'markersize': 8,
-           'label': 'Large Batch'
-       },
-       'more_patches': {
-           'color': '#9467bd',  # Purple
-           'linestyle': '-',
-           'marker': 'D',
-           'markevery': 20,
-           'linewidth': 3,
-           'markersize': 8,
-           'label': 'More Patches'
-       },
-       'extended_training': {
-           'color': '#8c564b',  # Brown
-           'linestyle': '--',
-           'marker': 'p',
-           'markevery': 20,
-           'linewidth': 3,
-           'markersize': 8,
-           'label': 'Extended Training'
-       },
-       'lr_decay': {
-           'color': '#e377c2',  # Pink
-           'linestyle': ':',
-           'marker': '*',
-           'markevery': 20,
-           'linewidth': 4,
-           'markersize': 10,
-           'label': 'LR Decay'
-       }
-   }
-   
-   for lattice in lattice_types:
-       sns.set_style("whitegrid")
-       sns.set_context("talk")
-       
-       # Create figure with a specific size and DPI
-       fig, ax = plt.subplots(figsize=(15, 10), dpi=150)
-       
-       # Track if any valid data was plotted
-       valid_data_plotted = False
-       max_x = 0
+def create_training_plots(all_results, save_path='analysis/figures/'):
+    """Create enhanced training and validation plots for all lattice types."""
+    # Make sure the save directory exists
+    os.makedirs(save_path, exist_ok=True)
 
-       print(f"\nProcessing {metric} for {lattice}")
-       
-       for config in all_results[lattice]:
-           metric_key = metric  # Use metric name directly without prefix
-           
-           print(f"Looking for {metric_key} in config {config}")
-           print(f"Available keys: {all_results[lattice][config].keys()}")
-           print(f"Sample data for {config}: {all_results[lattice][config][metric_key][:5] if metric_key in all_results[lattice][config] else 'No data'}")
-           
-           data = all_results[lattice][config].get(metric_key, [])
-           
-           if data:  # Only plot if we have data
-               x = [point[0] for point in data]
-               y = [point[1] for point in data]
-               
-               if len(x) > 0:  # Make sure we actually have points to plot
-                   # Plot with enhanced style
-                   ax.plot(x, y, **styles[config])
-                   valid_data_plotted = True
-                   max_x = max(max_x, max(x))
-                   print(f"Plotted {len(x)} points for {config}")
-               else:
-                   print(f"No points to plot for {config}")
-           else:
-               print(f"No data found for {config}")
-       
-       if valid_data_plotted:
-           # Customize the plot
-           ax.set_xlabel('Epoch', fontsize=14, fontweight='bold')
-           ax.set_ylabel(metric.replace('/', ' '), fontsize=14, fontweight='bold')
-           ax.set_title(f'{metric.replace("/", " ")} - {lattice}', 
-                       fontsize=16, 
-                       fontweight='bold', 
-                       pad=20)
-           
-           # Add legend with better positioning and style
-           legend = ax.legend(bbox_to_anchor=(1.05, 1), 
-                            loc='upper left',
-                            fontsize=12,
-                            frameon=True,
-                            fancybox=True,
-                            shadow=True,
-                            borderpad=1)
-           
-           # Make ticks bigger
-           ax.tick_params(axis='both', which='major', labelsize=12)
-           
-           # Set axis limits with some padding
-           ax.set_xlim(-2, max_x + 2)
-           ymin, ymax = ax.get_ylim()
-           yrange = ymax - ymin
-           ax.set_ylim(ymin - 0.05 * yrange, ymax + 0.05 * yrange)
-           
-           # Adjust layout and save
-           plt.tight_layout()
-           plt.savefig(f'analysis/figures/{lattice}_{metric.replace("/", "_")}.png',
-                      bbox_inches='tight',
-                      dpi=300,
-                      facecolor='white',
-                      edgecolor='none')
-       else:
-           print(f"No valid data to plot for {lattice} {metric}")
-           
-       plt.close()
+    lattice_types = ['Cubic', 'BCC', 'FCC']
+    metrics = ['Loss/train', 'Loss/val']
+    
+    # Enhanced style configuration
+    styles = {
+        'baseline': {'color': '#1f77b4', 'linestyle': '-', 'marker': 'o', 'label': 'Baseline'},
+        'lower_lr': {'color': '#ff7f0e', 'linestyle': '--', 'marker': 's', 'label': 'Lower LR'},
+        'small_batch': {'color': '#2ca02c', 'linestyle': ':', 'marker': '^', 'label': 'Small Batch'},
+        'large_batch': {'color': '#d62728', 'linestyle': '-.', 'marker': 'v', 'label': 'Large Batch'},
+        'more_patches': {'color': '#9467bd', 'linestyle': '-', 'marker': 'D', 'label': 'More Patches'},
+        'extended_training': {'color': '#8c564b', 'linestyle': '--', 'marker': 'p', 'label': 'Extended'},
+        'lr_decay': {'color': '#e377c2', 'linestyle': ':', 'marker': '*', 'label': 'LR Decay'}
+    }
+    
+    # Apply style defaults to all configurations
+    for style in styles.values():
+        style.update({
+            'markevery': 20,
+            'linewidth': 2.5,
+            'markersize': 8
+        })
 
-       # Debug print for MSE and Similarity metrics
-       if 'Reconstruction' in metric:
-           print(f"\nDebugging {metric} data for {lattice}:")
-           for config in all_results[lattice]:
-               data = all_results[lattice][config].get(metric_key, [])
-               print(f"{config}: {len(data)} points")
-               if data:
-                   print(f"First value: {data[0]}")
-                   print(f"Last value: {data[-1]}")
+    # Create a single figure with 2x3 subplot layout
+    fig = plt.figure(figsize=(20, 12), dpi=300)
+    gs = GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3)
+
+    # Set modern style
+    plt.style.use('default')
+    # Set custom style parameters
+    plt.rcParams.update({
+        'figure.facecolor': 'white',
+        'axes.grid': True,
+        'grid.alpha': 0.3,
+        'grid.linestyle': '--',
+        'axes.axisbelow': True,
+    })
+    
+    for i, metric in enumerate(['Loss/train', 'Loss/val']):
+        for j, lattice in enumerate(lattice_types):
+            ax = fig.add_subplot(gs[i, j])
+            
+            max_x = 0
+            for config in all_results[lattice]:
+                data = all_results[lattice][config].get(metric, [])
+                
+                if data:
+                    x = [point[0] for point in data]
+                    y = [point[1] for point in data]
+                    
+                    if len(x) > 0:
+                        ax.plot(x, y, **styles[config])
+                        max_x = max(max_x, max(x))
+            
+            # Customize each subplot
+            ax.set_xlabel('Epoch', fontsize=12, fontweight='bold')
+            ax.set_ylabel('Loss' if j == 0 else '', fontsize=12, fontweight='bold')
+            ax.set_title(f'{"Training" if i == 0 else "Validation"} Loss - {lattice}',
+                        fontsize=14, fontweight='bold', pad=10)
+            
+            # Scientific notation for y-axis with fixed precision
+            ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            
+            # Enhance grid and ticks
+            ax.tick_params(axis='both', which='major', labelsize=10)
+            
+            # Set consistent y-axis limits across rows
+            if j > 0:
+                ax.set_ylim(ax.get_ylim())
+
+    # Add single legend for the entire figure
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels,
+              loc='center right',
+              bbox_to_anchor=(0.98, 0.5),
+              fontsize=12,
+              frameon=True,
+              fancybox=True,
+              shadow=True)
+
+    # Save the combined plot
+    filename = os.path.join(save_path, f'combined_loss_curves_{metric.replace("/", "_")}.png')
+    plt.savefig(filename,
+                bbox_inches='tight',
+                dpi=300,
+                facecolor='white',
+                edgecolor='none')
+    plt.close()
 
 def create_performance_heatmap(all_results):
     """Generate heatmap of final performance metrics."""
@@ -644,10 +583,14 @@ def analyze_results():
                 print(f"Error accessing directory for {lattice}: {str(e)}")
     
     # Create plots
+    save_path = 'analysis/figures/'
+    os.makedirs(save_path, exist_ok=True)
+    
     metrics = ['Loss/train', 'Loss/val', 'Reconstruction_MSE', 'Reconstruction_Similarity']
     for metric in metrics:
         try:
-            create_training_plots(all_results, metric)
+            # Pass save_path explicitly
+            create_training_plots(all_results, save_path=save_path)
             print(f"Created training plot for {metric}")
         except Exception as e:
             print(f"Error creating training plot for {metric}: {str(e)}")
@@ -675,7 +618,7 @@ def run_all_configs(resume_training=False):
             train_autoencoder(
                 learning_rate=config['learning_rate'],
                 batch_size=config['batch_size'],
-                epochs=config['epochs'],
+                num_epochs=config['epochs'],  # Changed from 'epochs' to 'num_epochs'
                 patches_per_image=config['patches_per_image'],
                 lattice_type=lattice_type,
                 resume_training=resume_training
