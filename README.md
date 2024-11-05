@@ -47,34 +47,47 @@ DualDEC-STM is a convolutional autoencoder with a novel dual decoder architectur
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/DualDEC-STM.git
+git clone https://github.com/joshuamoorehead/DualDEC-STM.git
 cd DualDEC-STM
 ```
 
 ### 2. Install Dependencies
 
-Ensure Python and required libraries are installed:
-
+Create and activate the conda environment:
 ```bash
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate STM_AE
 ```
 
-### 3. Train the Model
+### 3. Run Training or Analysis
 
-Run training on your STM dataset:
-
+Navigate to the conv_ae directory and run the training script:
 ```bash
-python train.py --config configs/dual_decoder.yaml
+cd conv_ae
+python train.py
 ```
 
-### 4. Evaluate the Model
+The script will prompt you to:
+1. Run all configurations (Option 1)
+   - Trains models for all lattice types with various hyperparameter configurations:
+     - Baseline (lr=0.001, batch_size=1024, epochs=100)
+     - Lower Learning Rate (lr=0.0001)
+     - Small Batch Size (batch_size=256)
+     - Large Batch Size (batch_size=2048)
+     - More Patches (patches_per_image=4900)
+     - Extended Training (epochs=200)
+     - Learning Rate Decay
 
-Use evaluation scripts for reconstruction quality:
+2. Analyze existing results (Option 2)
+   - Generates visualization plots and performance metrics for trained models
+   - Creates loss curves and reconstruction quality comparisons
+   - Outputs performance metrics in LaTeX table format
 
-```bash
-python evaluate.py --model_path checkpoints/model_best.pth
-```
-
+Results and model checkpoints will be saved in:
+- `runs/autoencoder_experiment/` - TensorBoard logs
+- `models/weights/` - Model checkpoints
+- `analysis/figures/` - Generated plots and visualizations
+- `analysis/metrics/` - Performance metrics and analysis
 ## Project Significance
 
 DualDEC-STM enhances STM image analysis, bridging deep learning and nanoscale imaging, with potential applications in nanotechnology, metallurgy, and quantum computing.
