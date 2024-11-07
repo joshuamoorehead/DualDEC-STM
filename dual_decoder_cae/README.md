@@ -120,6 +120,3 @@ The following configurations are available:
 - Results are logged to TensorBoard for easy visualization
 - Checkpointing allows for training resumption and model persistence
 
-## Paper Reference
-
-For more details on the methodology and results, please refer to our paper [STM Image Analysis using Autoencoders](link-to-paper).
