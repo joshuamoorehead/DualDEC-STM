@@ -1,8 +1,65 @@
+# dual_decoder_cae/utils/metrics.py
 import torch
 import torch.nn.functional as F
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 from scipy import fftpack
+
+def calculate_ssim(pred, target, window_size=11, full=False):
+    """
+    Calculate structural similarity index measure (SSIM) between prediction and target
+    
+    Args:
+        pred (Tensor): Predicted image [B, C, H, W]
+        target (Tensor): Target image [B, C, H, W]
+        window_size (int): Size of the Gaussian window
+        full (bool): Whether to return the full SSIM image or just the mean
+        
+    Returns:
+        float: SSIM value
+    """
+    # Convert to numpy for SSIM calculation
+    pred_np = pred.detach().cpu().numpy()
+    target_np = target.detach().cpu().numpy()
+    
+    # Calculate SSIM for each image in batch
+    ssim_values = []
+    for p, t in zip(pred_np, target_np):
+        p_img = p.squeeze()  # Remove channel dimension
+        t_img = t.squeeze()
+        ssim_val = ssim(p_img, t_img, data_range=t_img.max() - t_img.min())
+        ssim_values.append(ssim_val)
+    
+    return np.mean(ssim_values)
+
+def calculate_psnr(pred, target):
+    """
+    Calculate peak signal-to-noise ratio (PSNR) between prediction and target
+    
+    Args:
+        pred (Tensor): Predicted image [B, C, H, W]
+        target (Tensor): Target image [B, C, H, W]
+        
+    Returns:
+        float: PSNR value
+    """
+    # Ensure values are in range [0, 1]
+    pred = torch.clamp(pred, 0, 1)
+    target = torch.clamp(target, 0, 1)
+    
+    # Calculate MSE
+    mse = F.mse_loss(pred, target).item()
+    
+    # Handle case where MSE is 0 (perfect prediction)
+    if mse == 0:
+        return float('inf')
+    
+    # Calculate PSNR
+    max_pixel = 1.0
+    psnr = 20 * torch.log10(torch.tensor(max_pixel) / torch.sqrt(torch.tensor(mse)))
+    
+    return psnr.item()
+
 
 class DualMetrics:
     def __init__(self, device='cuda'):
@@ -55,7 +112,6 @@ class DualMetrics:
             
             centered_centroids = compute_centroid(centered)
             original_centroids = compute_centroid(original)
-            
             centroid_distance = torch.norm(centered_centroids - original_centroids, dim=1).mean().item()
             
             return {

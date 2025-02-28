@@ -8,7 +8,7 @@ import numpy as np
 import torch.nn.functional as F
 
 class DualPurposeDataset(Dataset):
-    def __init__(self, root_dir='../Data/', transform=None, patches_per_image=100, patch_size=17):
+    def __init__(self, root_dir='../Data/', transform=None, patches_per_image=100, patch_size=16):
         self.root_dir = root_dir
         self.transform = transform
         self.patches_per_image = patches_per_image
