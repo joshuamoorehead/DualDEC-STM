@@ -22,8 +22,16 @@ class DualPurposeDataset(Dataset):
     def _extract_random_patches(self):
         for image_path in self.image_paths:
             image = Image.open(image_path).convert('L')
+            
+            # Add debug print to check image size
+            print(f"Original image size for {os.path.basename(image_path)}: {image.size}")
+            
             if self.transform:
                 image = self.transform(image)
+            
+            # Add debug print to check image size after transform
+            print(f"After transform: {image.shape}")
+            
             patches = self.extract_random_patches(image)
             self.patches.extend(patches)
 
