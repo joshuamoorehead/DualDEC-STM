@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 from tqdm import tqdm
+import json
 
 # Import modules from your project
 from dual_decoder_cae.config.hyperparameters import ExperimentConfig
@@ -18,6 +19,7 @@ from dual_decoder_cae.nas.combined_loss import NASCombinedLoss
 from dual_decoder_cae.nas.darts import NASDualDecoderAE
 from dual_decoder_cae.nas.evaluator import DARTSEvaluator
 from dual_decoder_cae.utils.visualization import DualVisualizer
+from dual_decoder_cae.nas.extract_architecture import extract_enhanced_architecture, create_enhanced_fixed_model_from_nas
 
 # Create a default configuration
 config = ExperimentConfig()
@@ -54,7 +56,8 @@ def estimate_search_time(model, dataset, batch_size=64, num_iterations=5):
     temp_alpha_optimizer = optim.Adam([p for p in model.parameters() if p.requires_grad], lr=0.0001)
     temp_criterion = NASCombinedLoss(
         center_weight=hyperparameters['center_loss_weight'],
-        noise_weight=hyperparameters['noise_loss_weight']
+        noise_weight=hyperparameters['noise_loss_weight'],
+        use_searchable_weights=True
     )
     
     # Time the forward and backward passes
@@ -64,7 +67,7 @@ def estimate_search_time(model, dataset, batch_size=64, num_iterations=5):
     for x, target in temp_loader:
         x, target = x.to(device), target.to(device)
         center_output, noise_output, _ = model(x)
-        loss, _, _ = temp_criterion(center_output, noise_output, target)
+        loss, _, _ = temp_criterion(center_output, noise_output, target, model=model)
         temp_w_optimizer.zero_grad()
         loss.backward()
         temp_w_optimizer.step()
@@ -80,14 +83,14 @@ def estimate_search_time(model, dataset, batch_size=64, num_iterations=5):
         
         # First pass - update weights
         center_output, noise_output, _ = model(x)
-        loss, _, _ = temp_criterion(center_output, noise_output, target)
+        loss, _, _ = temp_criterion(center_output, noise_output, target, model=model)
         temp_w_optimizer.zero_grad()
         loss.backward()
         temp_w_optimizer.step()
         
         # Second pass - update architecture params
         center_output, noise_output, _ = model(x)
-        loss, _, _ = temp_criterion(center_output, noise_output, target)
+        loss, _, _ = temp_criterion(center_output, noise_output, target, model=model)
         temp_alpha_optimizer.zero_grad()
         loss.backward()
         temp_alpha_optimizer.step()
@@ -109,6 +112,9 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
             estimate_time=True, patch_size=17):
     """
     Run Neural Architecture Search for the Dual Decoder Autoencoder
+    with enhanced search space including latent dimensionality, model depth,
+    channel widths, normalization layers, skip connections, dropout rates,
+    and loss function weights.
     
     Args:
         crystal_type (str): Type of crystal structure ('Cubic', 'BCC', 'FCC')
@@ -129,7 +135,7 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
     os.makedirs(nas_dir, exist_ok=True)
     
     # Create run directory with hyperparameters
-    run_dir = os.path.join(nas_dir, f'lr_{learning_rate}_bs_{batch_size}_nas_epochs_{nas_epochs}_patches_{patches_per_image}')
+    run_dir = os.path.join(nas_dir, f'enhanced_nas_lr_{learning_rate}_bs_{batch_size}_epochs_{nas_epochs}_patches_{patches_per_image}')
     os.makedirs(run_dir, exist_ok=True)
     
     # Initialize tensorboard
@@ -138,7 +144,6 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
     # Define transforms - use transforms that match your dataset
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Resize((16, 16)),
         transforms.Normalize((0.5,), (0.5,))
     ])
     
@@ -162,13 +167,20 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
         print(f"Error loading data: {str(e)}")
         raise
     
-    # Create model
-    print("Creating model for NAS...")
+    # Define search spaces for architecture parameters
+    latent_dims = [8, 16, 32, 64, 128]  # Options for latent space dimensionality
+    width_mults = [0.5, 0.75, 1.0, 1.25, 1.5]  # Width multiplier options
+    dropout_rates = [0.0, 0.1, 0.2, 0.3, 0.5]  # Dropout rate options
+    
+    # Create model with enhanced search space
+    print("Creating model with enhanced search space for NAS...")
     model = NASDualDecoderAE(
         in_channels=1,
         init_features=hyperparameters['init_features'],
-        latent_dim=hyperparameters['latent_dim'],
-        output_channels=1
+        output_channels=1,
+        latent_dims=latent_dims,
+        width_mults=width_mults,
+        dropout_rates=dropout_rates
     ).to(device)
     
     # Print model summary
@@ -176,9 +188,18 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params:,}")
     
+    # Print search space
+    print("\nEnhanced Neural Architecture Search Space:")
+    print(f"Latent Dimensions: {latent_dims}")
+    print(f"Channel Width Multipliers: {width_mults}")
+    print(f"Dropout Rates: {dropout_rates}")
+    print("Normalization Types: BatchNorm, LayerNorm, InstanceNorm, GroupNorm")
+    print("Skip Connection Types: None, Regular, Gated")
+    print("Loss Function Weights: Searchable balance between center and noise decoders")
+    
     # Estimate search time if requested
     if estimate_time:
-        print("Estimating search time...")
+        print("\nEstimating search time for enhanced NAS...")
         time_per_epoch = estimate_search_time(model, train_data, batch_size)
         total_estimated_time = time_per_epoch * nas_epochs
         
@@ -191,15 +212,16 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
         print(f"Estimated total search time for {nas_epochs} epochs: {hours}h {minutes}m {seconds}s")
         
         # Ask for confirmation to proceed
-        response = input(f"Proceed with NAS search? This will take approximately {hours}h {minutes}m. (y/n): ")
+        response = input(f"Proceed with enhanced NAS search? This will take approximately {hours}h {minutes}m. (y/n): ")
         if response.lower() != 'y':
             print("NAS search cancelled.")
             return None, None
     
-    # Initialize loss function
+    # Initialize loss function with searchable weights
     criterion = NASCombinedLoss(
         center_weight=hyperparameters['center_loss_weight'],
-        noise_weight=hyperparameters['noise_loss_weight']
+        noise_weight=hyperparameters['noise_loss_weight'],
+        use_searchable_weights=True  # Enable searchable weights
     )
     
     # Create DARTS evaluator
@@ -214,7 +236,7 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
     )
     
     # Run NAS search
-    print(f"Starting Neural Architecture Search for {nas_epochs} epochs...")
+    print(f"\nStarting Enhanced Neural Architecture Search for {nas_epochs} epochs...")
     start_time = time.time()
     
     metrics, best_model = evaluator.search(epochs=nas_epochs)
@@ -224,69 +246,128 @@ def run_nas(crystal_type='Cubic', learning_rate=0.001, nas_epochs=20,
     hours = int(search_time // 3600)
     minutes = int((search_time % 3600) // 60)
     seconds = int(search_time % 60)
-    print(f"NAS search completed in {hours}h {minutes}m {seconds}s")
+    print(f"Enhanced NAS search completed in {hours}h {minutes}m {seconds}s")
     
+    # Extract the architecture parameters
+    print("\nExtracting architecture parameters from best model...")
+    arch_info = extract_enhanced_architecture(best_model)
+    
+    # Save architecture info as JSON
+    with open(os.path.join(run_dir, 'architecture_info.json'), 'w') as f:
+        json.dump(arch_info, f, indent=4)
+    
+    """ # Create a fixed model based on the best architecture
+    fixed_model, _ = create_enhanced_fixed_model_from_nas(
+        best_model,
+        in_channels=1,
+        init_features=hyperparameters['init_features'],
+        output_channels=1
+    ) """
+
+
+        # Save the NAS model (skip fixed model creation)
+    torch.save({
+        'model_state_dict': best_model.state_dict(),
+        'architecture': arch_info,
+        'metrics': metrics,
+        'search_time': search_time
+    }, os.path.join(run_dir, 'best_nas_model.pt'))
+
     # Plot training curves
-    plt.figure(figsize=(15, 5))
-    
-    plt.subplot(1, 3, 1)
+    plt.figure(figsize=(16, 12))
+
+    # Loss curves
+    plt.subplot(2, 2, 1)
     plt.plot(metrics['train_loss'], label='Train Loss')
     plt.plot(metrics['val_loss'], label='Val Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
     plt.title('Loss Curves')
-    
-    plt.subplot(1, 3, 2)
+
+    # SSIM curve
+    plt.subplot(2, 2, 2)
     plt.plot(metrics['ssim'], label='SSIM')
     plt.xlabel('Epoch')
     plt.ylabel('SSIM')
     plt.title('SSIM Curve')
-    
-    plt.subplot(1, 3, 3)
+
+    # PSNR curve
+    plt.subplot(2, 2, 3)
     plt.plot(metrics['psnr'], label='PSNR')
     plt.xlabel('Epoch')
     plt.ylabel('PSNR (dB)')
     plt.title('PSNR Curve')
-    
+
+    # Latent dimension weights
+    if 'latent_dim' in arch_info and arch_info['latent_dim'] is not None:
+        plt.subplot(2, 2, 4)
+        plt.bar(range(len(latent_dims)),
+                [0.2] * len(latent_dims),  # Placeholder heights - replace with actual weights if available
+                tick_label=latent_dims)
+        plt.axvline(x=latent_dims.index(arch_info['latent_dim']), color='r', linestyle='--')
+        plt.xlabel('Latent Dimension')
+        plt.ylabel('Normalized Weight')
+        plt.title(f'Selected Latent Dimension: {arch_info["latent_dim"]}')
+
     plt.tight_layout()
     plt.savefig(os.path.join(run_dir, 'nas_training_curves.png'))
-    
-    # Save architecture weights
-    torch.save({
-        'model_state_dict': best_model.state_dict(),
-        'metrics': metrics,
-        'search_time': search_time
-    }, os.path.join(run_dir, 'best_nas_model.pt'))
-    
+
+    # Print architecture summary
+    print("\nBest Architecture Summary:")
+    print(f"- Latent Dimension: {arch_info['latent_dim']}")
+
+    if 'encoder' in arch_info:
+        print("Encoder:")
+        print(f"- Activation: {arch_info['encoder']['activation']}")
+        print(f"- Channel Widths: {arch_info['encoder']['channel_widths']}")
+        
+    if 'center_decoder' in arch_info:
+        print("Center Decoder:")
+        print(f"- Activation: {arch_info['center_decoder']['activation']}")
+        print(f"- Upsampling: {arch_info['center_decoder']['upsampling_types']}")
+        print(f"- Skip Connections: {arch_info['center_decoder']['use_skip_connections']}")
+        
+    if 'noise_decoder' in arch_info:
+        print("Noise Decoder:")
+        print(f"- Activation: {arch_info['noise_decoder']['activation']}")
+        print(f"- Upsampling: {arch_info['noise_decoder']['upsampling_types']}")
+        print(f"- Skip Connections: {arch_info['noise_decoder']['use_skip_connections']}")
+        
+    if 'loss_weights' in arch_info:
+        print("Loss Weights:")
+        print(f"- Center Weight: {arch_info['loss_weights']['center_weight']:.2f}")
+        print(f"- Noise Weight: {arch_info['loss_weights']['noise_weight']:.2f}")
+
     # Visualize some reconstructions using your DualVisualizer
-    print("Generating reconstruction visualizations...")
-    model.eval()
+    print("\nGenerating reconstruction visualizations...")
+    best_model.eval()  # Use the best_model directly instead of fixed_model
     with torch.no_grad():
         val_loader = DataLoader(val_loader.dataset, batch_size=8, shuffle=True)
         orig, _ = next(iter(val_loader))
         orig = orig.to(device)
-        center_output, noise_output, latent = model(orig)
+        center_output, noise_output, latent = best_model(orig)  # Use best_model
         
         # Use your visualizer
         visualizer = DualVisualizer(writer)
         visualizer.visualize_batch(
-            orig, noise_output, center_output, 
-            nas_epochs, f"NAS_{crystal_type}"
+            orig, noise_output, center_output,
+            nas_epochs, f"Enhanced_NAS_{crystal_type}"
         )
         
         # Also visualize latent space
         visualizer.visualize_latent_space(
-            latent, nas_epochs, f"NAS_{crystal_type}"
+            latent, nas_epochs, f"Enhanced_NAS_{crystal_type}"
         )
-    
-    print(f"NAS completed. Results saved to {run_dir}")
-    return best_model, metrics
+
+    print(f"\nEnhanced NAS completed. Results saved to {run_dir}")
+    return best_model, arch_info  # Return just the best_model and architecture info
+
 
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Run Neural Architecture Search for DualDEC-STM")
+    parser = argparse.ArgumentParser(description="Run Enhanced Neural Architecture Search for DualDEC-STM")
     parser.add_argument("--crystal", type=str, default="Cubic", choices=["Cubic", "BCC", "FCC"],
                         help="Crystal type (Cubic, BCC, or FCC)")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")

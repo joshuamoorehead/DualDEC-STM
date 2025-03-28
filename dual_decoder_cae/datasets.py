@@ -21,38 +21,61 @@ class DualPurposeDataset(Dataset):
 
     def _extract_random_patches(self):
         for image_path in self.image_paths:
+            # Load the full-sized image
             image = Image.open(image_path).convert('L')
-            
-            # Add debug print to check image size
             print(f"Original image size for {os.path.basename(image_path)}: {image.size}")
             
+            # Convert to tensor without any resizing
+            image_tensor = transforms.ToTensor()(image)
+            
+            # Apply only normalization if transform contains it
             if self.transform:
-                image = self.transform(image)
+                # Extract only normalization from the transform
+                for t in self.transform.transforms:
+                    if isinstance(t, transforms.Normalize):
+                        image_tensor = t(image_tensor)
             
-            # Add debug print to check image size after transform
-            print(f"After transform: {image.shape}")
+            print(f"After tensor conversion: {image_tensor.shape}")
             
-            patches = self.extract_random_patches(image)
+            # Extract 16x16 patches from the full-sized image
+            patches = self.extract_random_patches(image_tensor)
             self.patches.extend(patches)
 
     def extract_random_patches(self, image):
         patches = []
         h, w = image.shape[1:] if len(image.shape) == 3 else image.shape
-        half_size = self.patch_size // 2
-
+        
+        # For extracting exactly 16x16 patches
+        patch_size = self.patch_size
+        
         for _ in range(self.patches_per_image):
-            i = random.randint(half_size, h - half_size - 1)
-            j = random.randint(half_size, w - half_size - 1)
+            # We need at least patch_size/2 pixels from the edge in each direction
+            # For a 16x16 patch, we need 8 pixels of padding
+            padding = patch_size // 2
             
-            # Extract patch
-            patch = image[:, i-half_size:i+half_size+1, j-half_size:j+half_size+1]
+            # Ensure we have valid range for patch centers
+            if h <= 2*padding or w <= 2*padding:
+                print(f"Warning: Image too small ({h}x{w}) to extract {patch_size}x{patch_size} patches")
+                continue
             
-            # Create centered version (same as original for now, the model will learn to center)
+            # Select center points with enough padding for the patch
+            i = random.randint(padding, h - padding - 1)
+            j = random.randint(padding, w - padding - 1)
+            
+            # Extract exactly 16x16 patch
+            # For even-sized patches (like 16x16), we need to handle centers carefully
+            # Left side of center gets 8 pixels, right side gets 8 pixels (total 16)
+            patch = image[:, i-padding:i+padding, j-padding:j+padding]
+            
+            # Check that patch has the expected size
+            if patch.shape[1] != patch_size or patch.shape[2] != patch_size:
+                print(f"Warning: Got patch of size {patch.shape} instead of ({1}, {patch_size}, {patch_size})")
+                continue
+                
+            # Create centered version (same as original for now, model will learn to center)
             centered_patch = patch.clone()
             
-            # Both patches should be tensors
-            if torch.is_tensor(patch) and torch.is_tensor(centered_patch):
-                patches.append((patch, centered_patch))
+            patches.append((patch, centered_patch))
 
         return patches
 
@@ -64,13 +87,25 @@ class DualPurposeDataset(Dataset):
         return original_patch, centered_patch  # Returns a tuple of tensors
 
 def load_data_automated(data_root="../Data", batch_size=None, transform=None, 
-                       patches_per_image=None, lattice_type='Cubic'):
+                       patches_per_image=None, lattice_type='Cubic', patch_size=16):
     """Non-interactive version of load_data for automated configuration runs"""
     folder_map = {
         'Cubic': ('trainCubic', 'validationCubic', 'testCubic'),
         'BCC': ('trainBCC', 'validationBCC', 'testBCC'),
         'FCC': ('trainFCC', 'validationFCC', 'testFCC')
     }
+    
+    # Ensure we're not applying resize in the transform
+    safe_transform = None
+    if transform is not None:
+        # Create a new transform without any resize operations
+        safe_transforms = []
+        for t in transform.transforms:
+            if not isinstance(t, transforms.Resize):
+                safe_transforms.append(t)
+        
+        if safe_transforms:
+            safe_transform = transforms.Compose(safe_transforms)
     
     train_folder, val_folder, test_folder = folder_map[lattice_type]
     train_data_folder = os.path.join(data_root, train_folder)
@@ -81,18 +116,18 @@ def load_data_automated(data_root="../Data", batch_size=None, transform=None,
     print(f"Loading validation data from {val_data_folder}")
     print(f"Loading testing data from {test_data_folder}")
 
-    train_data = DualPurposeDataset(train_data_folder, transform=transform, 
-                                   patches_per_image=patches_per_image)
+    train_data = DualPurposeDataset(train_data_folder, transform=safe_transform, 
+                                   patches_per_image=patches_per_image, patch_size=patch_size)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, 
                             num_workers=4, pin_memory=True)
 
-    val_data = DualPurposeDataset(val_data_folder, transform=transform, 
-                                 patches_per_image=patches_per_image)
+    val_data = DualPurposeDataset(val_data_folder, transform=safe_transform, 
+                                 patches_per_image=patches_per_image, patch_size=patch_size)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, 
                           num_workers=4, pin_memory=True)
 
-    test_data = DualPurposeDataset(test_data_folder, transform=transform, 
-                                  patches_per_image=patches_per_image)
+    test_data = DualPurposeDataset(test_data_folder, transform=safe_transform, 
+                                  patches_per_image=patches_per_image, patch_size=patch_size)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, 
                            num_workers=4, pin_memory=True)
 

@@ -1,0 +1,78 @@
+{
+    "latent_dim": 128,
+    "encoder": {
+        "activation": "swish",
+        "kernel_sizes": [
+            3
+        ],
+        "dilations": [
+            2
+        ],
+        "norm_types": [
+            "instance",
+            "layer",
+            "group"
+        ],
+        "dropout_rates": [
+            0.1,
+            0.1,
+            0.2,
+            0.1
+        ],
+        "channel_widths": [
+            1.5,
+            1.25,
+            1.5
+        ]
+    },
+    "center_decoder": {
+        "activation": "gelu",
+        "upsampling_types": [
+            "pixelshuffle"
+        ],
+        "norm_types": [
+            "layer",
+            "instance"
+        ],
+        "dropout_rates": [
+            0.5,
+            0.5,
+            0.0,
+            0.0,
+            0.3
+        ],
+        "channel_widths": [
+            1.0,
+            0.75,
+            1.0
+        ],
+        "use_skip_connections": false
+    },
+    "noise_decoder": {
+        "activation": "gelu",
+        "upsampling_types": [
+            "bilinear"
+        ],
+        "norm_types": [
+            "group",
+            "layer"
+        ],
+        "dropout_rates": [
+            0.2,
+            0.3,
+            0.0,
+            0.5,
+            0.5
+        ],
+        "channel_widths": [
+            0.75,
+            1.25,
+            1.25
+        ],
+        "use_skip_connections": false
+    },
+    "loss_weights": {
+        "center_weight": 1.3874397277832031,
+        "noise_weight": 0.6125602722167969
+    }
+}

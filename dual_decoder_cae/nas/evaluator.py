@@ -57,31 +57,34 @@ class DARTSEvaluator:
         # Forward pass
         center_output, noise_output, z = self.model(x)
         
-        # Calculate loss - assuming target is the original patch and
-        # we want to reconstruct it with both decoders
-        loss, center_loss, noise_loss = self.criterion(center_output, noise_output, target)
+        # Calculate loss - passing the model to use searchable weights
+        loss, center_loss, noise_loss = self.criterion(
+            center_output, noise_output, target, model=self.model
+        )
         
         # Backward pass and optimize
         self.w_optimizer.zero_grad()
         loss.backward()
         self.w_optimizer.step()
         
-        return loss.item(), center_output, noise_output
+        return loss.item(), center_loss.item(), noise_loss.item()
     
     def valid_step(self, x, target):
         """Outer optimization loop (update architecture parameters)"""
         # Forward pass
         center_output, noise_output, z = self.model(x)
         
-        # Calculate loss
-        loss, center_loss, noise_loss = self.criterion(center_output, noise_output, target)
+        # Calculate loss - passing the model to use searchable weights
+        loss, center_loss, noise_loss = self.criterion(
+            center_output, noise_output, target, model=self.model
+        )
         
         # Backward pass and optimize architecture parameters
         self.alpha_optimizer.zero_grad()
         loss.backward()
         self.alpha_optimizer.step()
         
-        return loss.item(), center_output, noise_output
+        return loss.item(), center_loss.item(), noise_loss.item()
     
     def train_epoch(self, epoch):
         """Train for one epoch"""
